@@ -1,4 +1,4 @@
 streamlit
 pandas
 boto3
-pyarrow.parquet
+pyarrow
