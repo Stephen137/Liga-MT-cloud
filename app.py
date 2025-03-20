@@ -20,7 +20,7 @@ s3_client = boto3.client(
 # Function to fetch Parquet data from S3
 @st.cache_data(ttl=3600)  # Cache data for 1 hour to avoid repeated S3 calls
 def fetch_parquet_from_s3(city):
-    key = f"{S3_BUCKET_NAME}/unity-catalog/silver/{city.lower()}/*.parquet"  # Adjust path as per your S3 structure
+    key = f"s3://{S3_BUCKET_NAME}/unity-catalog/silver/{city.lower()}/*.parquet"  # Adjust path as per your S3 structure
     try:
         response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=key)
         parquet_file = BytesIO(response["Body"].read())
