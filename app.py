@@ -1,13 +1,12 @@
 import streamlit as st
 import pandas as pd
 import boto3
-import os
 from io import BytesIO
 import pyarrow.parquet as pq
 
 # AWS S3 Configuration
-AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")  # Store in environment variables
-AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")  # Store in environment variables
+AWS_ACCESS_KEY = st.secrets("AWS_ACCESS_KEY")  # Store in environment variables
+AWS_SECRET_KEY = st.secrets("AWS_SECRET_KEY")  # Store in environment variables
 S3_BUCKET_NAME = "databricks-workspace-liga-mt-bucket"  # Replace with your S3 bucket name
 
 # Initialize S3 client
