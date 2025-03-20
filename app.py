@@ -19,7 +19,7 @@ s3_client = boto3.client(
 # Function to fetch all Parquet files from a folder in S3
 @st.cache_data(ttl=3600)  # Cache data for 1 hour to avoid repeated S3 calls
 def fetch_all_parquet_from_s3(city):
-    prefix = f"unity-catalog/silver/{city()}/"
+    prefix = f"unity-catalog/silver/{city}/"
     try:
         # List objects in the folder
         response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix)
