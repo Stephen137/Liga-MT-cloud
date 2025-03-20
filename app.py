@@ -4,10 +4,10 @@ import boto3
 from io import BytesIO
 import pyarrow.parquet as pq
 
-# AWS S3 Configuration
-AWS_ACCESS_KEY = st.secrets["AWS_ACCESS_KEY"]  # Store in environment variables
-AWS_SECRET_KEY = st.secrets["AWS_SECRET_KEY"]  # Store in environment variables
-S3_BUCKET_NAME = st.secrets["S3_BUCKET_NAME"]  # Replace with your S3 bucket name
+# Fetch AWS credentials from Streamlit Secrets
+AWS_ACCESS_KEY = st.secrets["AWS_ACCESS_KEY"]
+AWS_SECRET_KEY = st.secrets["AWS_SECRET_KEY"]
+S3_BUCKET_NAME = st.secrets["S3_BUCKET_NAME"]
 
 # Initialize S3 client
 s3_client = boto3.client(
@@ -16,14 +16,31 @@ s3_client = boto3.client(
     aws_secret_access_key=AWS_SECRET_KEY
 )
 
-# Function to fetch Parquet data from S3
+# Function to fetch all Parquet files from a folder in S3
 @st.cache_data(ttl=3600)  # Cache data for 1 hour to avoid repeated S3 calls
-def fetch_parquet_from_s3(city):
-    key = f"unity-catalog/silver/{city.lower()}/*.parquet" # Adjust path as per your S3 structure
+def fetch_all_parquet_from_s3(city):
+    prefix = f"unity-catalog/silver/{city()}/"
     try:
-        response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=key)
-        parquet_file = BytesIO(response["Body"].read())
-        return pq.read_table(parquet_file).to_pandas()  # Convert Parquet to Pandas DataFrame
+        # List objects in the folder
+        response = s3_client.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=prefix)
+        if "Contents" not in response:
+            st.warning(f"No files found in {prefix}")
+            return pd.DataFrame()
+
+        # Fetch and concatenate all Parquet files
+        dfs = []
+        for obj in response["Contents"]:
+            if obj["Key"].endswith(".parquet"):  # Ensure only Parquet files are processed
+                file_response = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key=obj["Key"])
+                parquet_file = BytesIO(file_response["Body"].read())
+                df = pq.read_table(parquet_file).to_pandas()
+                dfs.append(df)
+        
+        if not dfs:
+            st.warning(f"No Parquet files found in {prefix}")
+            return pd.DataFrame()
+
+        return pd.concat(dfs, ignore_index=True)
     except Exception as e:
         st.error(f"Error fetching data for {city}: {e}")
         return pd.DataFrame()  # Return empty DataFrame on error
@@ -34,11 +51,11 @@ def app():
     st.header("by Stephen Barrie")
 
     # Sidebar Filters
-    cities = ["Kraków", "Gdańsk", "Poznań", "Wrocław", "Warszawa", "Śląsk"]
+    cities = ["krakow", "gdansk", "poznan", "wroclaw", "warsaw", "slask"]
     selected_city = st.sidebar.selectbox("Wybierz miasto", sorted(cities))
 
     # Fetch data for the selected city
-    df_city = fetch_parquet_from_s3(selected_city)
+    df_city = fetch_all_parquet_from_s3(selected_city)
 
     if df_city.empty:
         st.warning("No data available for the selected city.")
