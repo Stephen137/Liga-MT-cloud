@@ -143,7 +143,7 @@ def app():
         team_filtered_df_sorted.reset_index(drop=True, inplace=True)
         team_filtered_df_sorted.index += 1
 
-         team_filtered_df_sorted = team_filtered_df_sorted.rename(columns={
+        team_filtered_df_sorted = team_filtered_df_sorted.rename(columns={
         "date": "Data",
         "home_team": "Drużyna Gospodarzy",
         "away_team": "Zespół Gości",
