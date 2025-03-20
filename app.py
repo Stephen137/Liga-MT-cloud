@@ -7,7 +7,7 @@ import pyarrow.parquet as pq
 # AWS S3 Configuration
 AWS_ACCESS_KEY = st.secrets("AWS_ACCESS_KEY")  # Store in environment variables
 AWS_SECRET_KEY = st.secrets("AWS_SECRET_KEY")  # Store in environment variables
-S3_BUCKET_NAME = "databricks-workspace-liga-mt-bucket"  # Replace with your S3 bucket name
+S3_BUCKET_NAME = st.secrets("S3_BUCKET_NAME")  # Replace with your S3 bucket name
 
 # Initialize S3 client
 s3_client = boto3.client(
