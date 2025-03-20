@@ -124,6 +124,13 @@ def app():
 
         # Sort the league table
         league_table_sorted = league_table.sort_values(by=["Punkty", "Różnica_Bramek"], ascending=[False, False])
+
+        league_table_sorted = league_table_sorted.rename(columns={
+        "Strzelone_Bramki": "Strzelone Bramki",
+        "Stracone_Bramki": "Stracone Bramki",
+        "Różnica_Bramek": "Różnica Bramek"       
+        })
+        
         league_table_sorted.reset_index(drop=True, inplace=True)
         league_table_sorted.index += 1
 
@@ -135,6 +142,15 @@ def app():
         team_filtered_df_sorted = team_filtered_df[["date", "home_team", "home_goals", "away_team", "away_goals"]].sort_values(by="date", ascending=True)
         team_filtered_df_sorted.reset_index(drop=True, inplace=True)
         team_filtered_df_sorted.index += 1
+
+         team_filtered_df_sorted = team_filtered_df_sorted.rename(columns={
+        "date": "Data",
+        "home_team": "Drużyna Gospodarzy",
+        "away_team": "Zespół Gości",
+        "home_goals": "\u2003",
+        "away_goals": "\u2800"
+        })
+        
 
         # Display the sorted match results
         st.dataframe(team_filtered_df_sorted)
