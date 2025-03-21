@@ -65,8 +65,23 @@ def app():
    
 
     # Sidebar Filters
-    cities = ["krakow", "gdansk", "poznan", "wroclaw", "warsaw", "slask"]
-    selected_city = st.sidebar.selectbox("Wybierz miasto", sorted(cities))   
+   cities = {
+    "Kraków": "krakow",
+    "Gdańsk": "gdansk",
+    "Poznań": "poznan",
+    "Wrocław": "wroclaw",
+    "Warszawa": "warsaw",
+    "Śląsk": "slask"
+    }
+
+    # Create a sorted list of display names
+    sorted_display_names = sorted(cities.keys())
+    
+   # Create the selectbox with display names
+    selected_display_name = st.sidebar.selectbox("Wybierz miasto", sorted_display_names)  
+
+    # Get the corresponding parameter value
+    selected_city = cities[selected_display_name]
 
     # Fetch data for the selected city
     df_city = fetch_all_parquet_from_s3(selected_city)
