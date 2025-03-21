@@ -175,7 +175,7 @@ def app():
     else:
         # Display match results
         team_filtered_df["date"] = pd.to_datetime(team_filtered_df['date'], format="%d/%m/%Y").dt.date
-        team_filtered_df_sorted = team_filtered_df[["date", "pitch", "group", "home_team", "home_goals", "away_team", "away_goals"]].sort_values(by="date", ascending=True)
+        team_filtered_df_sorted = team_filtered_df[["date", "pitch", "group", "home_team", "home_goals", "away_team", "away_goals"]].sort_values(by=["date", "group"],ascending=[True,True])
         team_filtered_df_sorted.reset_index(drop=True, inplace=True)
         team_filtered_df_sorted.index += 1
 
