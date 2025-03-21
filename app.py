@@ -65,13 +65,13 @@ def app():
    
 
     # Sidebar Filters
-   cities = {
-    "Kraków": "krakow",
-    "Gdańsk": "gdansk",
-    "Poznań": "poznan",
-    "Wrocław": "wroclaw",
-    "Warszawa": "warsaw",
-    "Śląsk": "slask"
+    cities = {
+        "Kraków": "krakow",
+        "Gdańsk": "gdansk",
+        "Poznań": "poznan",
+        "Wrocław": "wroclaw",
+        "Warszawa": "warsaw",
+        "Śląsk": "slask"
     }
 
     # Create a sorted list of display names
