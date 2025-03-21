@@ -189,40 +189,40 @@ def app():
         "away_goals": "\u2800"
         })
 
-     if selected_team == "Wszystkie Drużyny" and view_option == "Wyniki Meczu":
-        # Function to assign a background color based on "Grupa"
-        def assign_background_color(group):
-            if group == "A":
-                return "background-color: #2E4E6F;"  # Darker blue for Grupa A
-            elif group == "B":
-                return "background-color: #1C2E4A;"  # Lighter blue for Grupa B
-            elif group == "C":
-                return "background-color: #2E4E6F;"  # Darker blue for Grupa C
-            elif group == "D":
-                return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-            elif group == "E":
-                return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-            elif group == "F":
-                return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-            elif group == "G":
-                return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-            elif group == "H":
-                return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-            elif group == "I":
-                return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-            elif group == "J":
-                return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-            elif group == "K":
-                return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-            elif group == "L":
-                return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-            elif group == "M":
-                return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-                
-            # Add more conditions if there are more groups
-            else:
-                return ""  # Default (no background color)
-
+         if selected_team == "Wszystkie Drużyny" and view_option == "Wyniki Meczu":
+            # Function to assign a background color based on "Grupa"
+            def assign_background_color(group):
+                if group == "A":
+                    return "background-color: #2E4E6F;"  # Darker blue for Grupa A
+                elif group == "B":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa B
+                elif group == "C":
+                    return "background-color: #2E4E6F;"  # Darker blue for Grupa C
+                elif group == "D":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "E":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                elif group == "F":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "G":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                elif group == "H":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "I":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                elif group == "J":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "K":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                elif group == "L":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "M":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                    
+                # Add more conditions if there are more groups
+                else:
+                    return ""  # Default (no background color)
+    
             # Apply the background color to each row based on "Grupa"
             team_filtered_df_sorted["style"] = team_filtered_df_sorted["Grupa"].apply(assign_background_color)    
     
