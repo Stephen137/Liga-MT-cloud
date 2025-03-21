@@ -189,7 +189,8 @@ def app():
         "away_goals": "\u2800"
         })
 
-         if selected_team == "Wszystkie Drużyny" and view_option == "Wyniki Meczu":
+        if selected_team == "Wszystkie Drużyny" and view_option == "Wyniki Meczu":
+            
             # Function to assign a background color based on "Grupa"
             def assign_background_color(group):
                 if group == "A":
