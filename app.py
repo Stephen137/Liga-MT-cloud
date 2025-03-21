@@ -66,7 +66,7 @@ def app():
 
     # Sidebar Filters
     cities = ["krakow", "gdansk", "poznan", "wroclaw", "warsaw", "slask"]
-    selected_city = st.sidebar.selectbox("Wybierz miasto", sorted(cities))
+    selected_city = st.sidebar.selectbox("Wybierz miasto", sorted(cities))   
 
     # Fetch data for the selected city
     df_city = fetch_all_parquet_from_s3(selected_city)
@@ -108,10 +108,10 @@ def app():
         st.markdown(
             """
             <style>
-            /* Alternating every tworows */
+            /* Alternating every row */
             .stMarkdown table tr:nth-child(2n+1) {         
 
-                background-color: #2E4E6F; /* Darker blue for the first rows */
+                background-color: #2E4E6F; /* Darker blue for the first row */
             }
             .stMarkdown table tr:nth-child(2n+2) {
           
@@ -169,8 +169,8 @@ def app():
         league_table_sorted.reset_index(drop=True, inplace=True)
         league_table_sorted.index += 1
 
-        # Display the league table
-        st.dataframe(league_table_sorted)
+        st.markdown(league_table_sorted.to_html(escape=False), unsafe_allow_html=True)  
+        #st.dataframe(league_table_sorted)
         
     else:
         # Display match results
