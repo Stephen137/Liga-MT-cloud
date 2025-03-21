@@ -47,8 +47,22 @@ def fetch_all_parquet_from_s3(city):
 
 # Streamlit App
 def app():
+
+    st.set_page_config(layout="wide")    
+    
     st.title("Liga MT - Sezon Zimowy")
     st.header("by Stephen Barrie")
+
+    st.markdown(
+    """
+    <style>
+    .stMarkdown table th { background-color: #00172B; color: white; }
+    .stMarkdown table td { color: white; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+    )
+   
 
     # Sidebar Filters
     cities = ["krakow", "gdansk", "poznan", "wroclaw", "warsaw", "slask"]
@@ -79,6 +93,7 @@ def app():
     # Filter data based on selected team
     if selected_team == "Wszystkie Drużyny":
         team_filtered_df = filtered_df  # Show all matches for the selected age category
+        
     else:
         team_filtered_df = filtered_df[
             (filtered_df["home_team"] == selected_team) | 
@@ -89,6 +104,26 @@ def app():
     view_option = st.radio("Wybierz Widok:", ["Tabela Ligowa", "Wyniki Meczu"])
 
     if view_option == "Tabela Ligowa":
+
+        st.markdown(
+            """
+            <style>
+            /* Alternating every tworows */
+            .stMarkdown table tr:nth-child(2n+1) {         
+
+                background-color: #2E4E6F; /* Darker blue for the first rows */
+            }
+            .stMarkdown table tr:nth-child(2n+2) {
+          
+                background-color: #1C2E4A; /* Lighter blue for the next row */
+            }
+            .stMarkdown table th { background-color: #00172B; color: white; }
+            .stMarkdown table td { color: white; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        
         # Calculate home team standings
         home_standings = filtered_df.groupby("home_team").agg(
             Mecze=("home_team", "count"),
@@ -136,24 +171,113 @@ def app():
 
         # Display the league table
         st.dataframe(league_table_sorted)
+        
     else:
         # Display match results
         team_filtered_df["date"] = pd.to_datetime(team_filtered_df['date'], format="%d/%m/%Y").dt.date
-        team_filtered_df_sorted = team_filtered_df[["date", "home_team", "home_goals", "away_team", "away_goals"]].sort_values(by="date", ascending=True)
+        team_filtered_df_sorted = team_filtered_df[["date", "pitch", "group", "home_team", "home_goals", "away_team", "away_goals"]].sort_values(by="date", ascending=True)
         team_filtered_df_sorted.reset_index(drop=True, inplace=True)
         team_filtered_df_sorted.index += 1
 
         team_filtered_df_sorted = team_filtered_df_sorted.rename(columns={
         "date": "Data",
+        "pitch": "Boisko",
+        "group": "Grupa",
         "home_team": "Drużyna Gospodarzy",
         "away_team": "Zespół Gości",
         "home_goals": "\u2003",
         "away_goals": "\u2800"
         })
-        
 
-        # Display the sorted match results
-        st.dataframe(team_filtered_df_sorted)
+         if selected_team == "Wszystkie Drużyny" and view_option == "Wyniki Meczu":
+            # Function to assign a background color based on "Grupa"
+            def assign_background_color(group):
+                if group == "A":
+                    return "background-color: #2E4E6F;"  # Darker blue for Grupa A
+                elif group == "B":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa B
+                elif group == "C":
+                    return "background-color: #2E4E6F;"  # Darker blue for Grupa C
+                elif group == "D":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "E":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                elif group == "F":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "G":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                elif group == "H":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "I":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                elif group == "J":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "K":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                elif group == "L":
+                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
+                elif group == "M":
+                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
+                    
+                # Add more conditions if there are more groups
+                else:
+                    return ""  # Default (no background color)
+
+            # Apply the background color to each row based on "Grupa"
+            team_filtered_df_sorted["style"] = team_filtered_df_sorted["Grupa"].apply(assign_background_color)    
+    
+             # Generate the HTML table with inline styles, excluding the "style" column
+            html_table = (
+                team_filtered_df_sorted
+                .style
+                .apply(lambda x: [x["style"]] * len(x), axis=1)  # Apply styles
+                .hide(axis="columns", subset=["style"])  # Hide the "style" column
+                .to_html(escape=False, index=False)
+            )
+    
+            # Display the styled match results
+            st.markdown(html_table, unsafe_allow_html=True)        
+        
+        else:                                        
+            # Custom CSS for alternating every three rows
+            st.markdown(
+                """
+                <style>
+                /* Alternating every three rows */
+                .stMarkdown table tr:nth-child(6n+1),
+                .stMarkdown table tr:nth-child(6n+2),
+                .stMarkdown table tr:nth-child(6n+3) {         
+    
+                    background-color: #2E4E6F; /* Darker blue for the first six rows */
+                }
+                .stMarkdown table tr:nth-child(6n+4),
+                .stMarkdown table tr:nth-child(6n+5),
+                .stMarkdown table tr:nth-child(6n+6) {
+              
+                    background-color: #1C2E4A; /* Lighter blue for the next six rows */
+                }
+                .stMarkdown table th { background-color: #00172B; color: white; }
+                .stMarkdown table td { color: white; }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+                
+            # Highlight the selected team in red
+            #def highlight_team_match(val):
+                #if val == selected_team:
+                    #return f'<span style="color: #2E4E6F;">{val}</span>'
+                #return val
+    
+            # Apply highlighting to the "Drużyna Gospodarzy" and "Zespół Gości" columns
+            #team_filtered_df_sorted["Drużyna Gospodarzy"] = team_filtered_df_sorted["Drużyna Gospodarzy"].apply(highlight_team_match)
+            #team_filtered_df_sorted["Zespół Gości"] = team_filtered_df_sorted["Zespół Gości"].apply(highlight_team_match)
+    
+           # Display the styled match results
+            st.markdown(team_filtered_df_sorted.to_html(escape=False), unsafe_allow_html=True)
+                  
+            #st.dataframe(team_filtered_df_sorted_styled, height=600, width=500)  # Set fixed height to enable scrolling 
+       
 
 # Run the Streamlit app
 if __name__ == "__main__":
