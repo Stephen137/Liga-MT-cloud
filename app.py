@@ -3,6 +3,7 @@ import pandas as pd
 import boto3
 from io import BytesIO
 import pyarrow.parquet as pq
+from datetime import datetime
 
 # Fetch AWS credentials from Streamlit Secrets
 AWS_ACCESS_KEY = st.secrets["AWS_ACCESS_KEY"]
@@ -45,9 +46,49 @@ def fetch_all_parquet_from_s3(city):
         st.error(f"Error fetching data for {city}: {e}")
         return pd.DataFrame()  # Return empty DataFrame on error
 
-# Streamlit App
-def app():
+def calculate_league_table(df):
+    """Helper function to calculate league table from a dataframe"""
+    home = df.groupby("home_team").agg(
+        Mecze=("home_team", "count"),
+        Zwycięstwa=("home_goals", lambda x: (x > df.loc[x.index, "away_goals"]).sum()),
+        Przegrane=("home_goals", lambda x: (x < df.loc[x.index, "away_goals"]).sum()),
+        Remisy=("home_goals", lambda x: (x == df.loc[x.index, "away_goals"]).sum()),
+        Gole_Strzelone=("home_goals", "sum"),
+        Gole_Stracone=("away_goals", "sum")
+    ).reset_index().rename(columns={"home_team": "Drużyna"})
+    
+    away = df.groupby("away_team").agg(
+        Mecze=("away_team", "count"),
+        Zwycięstwa=("away_goals", lambda x: (x > df.loc[x.index, "home_goals"]).sum()),
+        Przegrane=("away_goals", lambda x: (x < df.loc[x.index, "home_goals"]).sum()),
+        Remisy=("away_goals", lambda x: (x == df.loc[x.index, "home_goals"]).sum()),
+        Gole_Strzelone=("away_goals", "sum"),
+        Gole_Stracone=("home_goals", "sum")
+    ).reset_index().rename(columns={"away_team": "Drużyna"})
 
+    table = pd.concat([home, away]).groupby("Drużyna").agg({
+        "Mecze": "sum", 
+        "Zwycięstwa": "sum", 
+        "Remisy": "sum", 
+        "Przegrane": "sum",
+        "Gole_Strzelone": "sum", 
+        "Gole_Stracone": "sum"
+    }).reset_index()
+    
+    # Calculate goal difference and points
+    table["Różnica Bramek"] = table["Gole_Strzelone"] - table["Gole_Stracone"]
+    table["Punkty"] = table["Zwycięstwa"] * 3 + table["Remisy"]
+    
+    # Rename columns after all calculations
+    table = table.rename(columns={
+        "Gole_Strzelone": "Strzelone Bramki",
+        "Gole_Stracone": "Stracone Bramki"
+    }).sort_values(["Punkty", "Różnica Bramek"], ascending=[False, False])
+    
+    table.index = range(1, len(table)+1)
+    return table
+
+def main():
     st.set_page_config(layout="wide")    
     
     st.title("Liga MT - Sezon Zimowy")
@@ -62,7 +103,6 @@ def app():
     """,
     unsafe_allow_html=True,
     )
-   
 
     # Sidebar Filters
     cities = {
@@ -77,7 +117,7 @@ def app():
     # Create a sorted list of display names
     sorted_display_names = sorted(cities.keys())
     
-   # Create the selectbox with display names
+    # Create the selectbox with display names
     selected_display_name = st.sidebar.selectbox("Wybierz miasto", sorted_display_names)  
 
     # Get the corresponding parameter value
@@ -95,6 +135,13 @@ def app():
 
     # Filter Data
     filtered_df = df_city[df_city["category"] == selected_age]
+    filtered_df['date'] = pd.to_datetime(filtered_df['date'], format='%d/%m/%Y')
+
+    # Get unique match dates for selected city and age group
+    unique_dates = sorted(filtered_df['date'].dt.date.unique(), reverse=True)
+    if len(unique_dates) == 0:
+        st.error("Brak meczów dla wybranej kombinacji miasta i kategorii wiekowej")
+        return
 
     # Combine team names from home_team and away_team columns
     all_teams = pd.unique(filtered_df[["home_team", "away_team"]].values.ravel("K"))
@@ -108,7 +155,6 @@ def app():
     # Filter data based on selected team
     if selected_team == "Wszystkie Drużyny":
         team_filtered_df = filtered_df  # Show all matches for the selected age category
-        
     else:
         team_filtered_df = filtered_df[
             (filtered_df["home_team"] == selected_team) | 
@@ -119,18 +165,15 @@ def app():
     view_option = st.radio("Wybierz Widok:", ["Tabela Ligowa", "Wyniki Meczu"])
 
     if view_option == "Tabela Ligowa":
-
         st.markdown(
             """
             <style>
             /* Alternating every row */
             .stMarkdown table tr:nth-child(2n+1) {         
-
-                background-color: #2E4E6F; /* Darker blue for the first row */
+                background-color: #2E4E6F;
             }
             .stMarkdown table tr:nth-child(2n+2) {
-          
-                background-color: #1C2E4A; /* Lighter blue for the next row */
+                background-color: #1C2E4A;
             }
             .stMarkdown table th { background-color: #00172B; color: white; }
             .stMarkdown table td { color: white; }
@@ -139,162 +182,100 @@ def app():
             unsafe_allow_html=True,
         )
         
-        # Calculate home team standings
-        home_standings = filtered_df.groupby("home_team").agg(
-            Mecze=("home_team", "count"),
-            Zwycięstwa=("home_goals", lambda x: (x > filtered_df.loc[x.index, "away_goals"]).sum()),
-            Przegrane=("home_goals", lambda x: (x < filtered_df.loc[x.index, "away_goals"]).sum()),
-            Remisy=("home_goals", lambda x: (x == filtered_df.loc[x.index, "away_goals"]).sum()),
-            Strzelone_Bramki=("home_goals", "sum"),
-            Stracone_Bramki=("away_goals", "sum")
-        ).reset_index().rename(columns={"home_team": "Drużyna"})
-
-        # Calculate away team standings
-        away_standings = filtered_df.groupby("away_team").agg(
-            Mecze=("away_team", "count"),
-            Zwycięstwa=("away_goals", lambda x: (x > filtered_df.loc[x.index, "home_goals"]).sum()),
-            Przegrane=("away_goals", lambda x: (x < filtered_df.loc[x.index, "home_goals"]).sum()),
-            Remisy=("away_goals", lambda x: (x == filtered_df.loc[x.index, "home_goals"]).sum()),
-            Strzelone_Bramki=("away_goals", "sum"),
-            Stracone_Bramki=("home_goals", "sum")
-        ).reset_index().rename(columns={"away_team": "Drużyna"})
-
-        # Combine home and away standings
-        league_table = pd.concat([home_standings, away_standings]).groupby("Drużyna").agg(
-            Mecze=("Mecze", "sum"),
-            Zwycięstwa=("Zwycięstwa", "sum"),
-            Remisy=("Remisy", "sum"),
-            Przegrane=("Przegrane", "sum"),
-            Strzelone_Bramki=("Strzelone_Bramki", "sum"),
-            Stracone_Bramki=("Stracone_Bramki", "sum")
-        ).reset_index()
-
-        league_table["Różnica_Bramek"] = league_table["Strzelone_Bramki"] - league_table["Stracone_Bramki"]
-        league_table["Punkty"] = league_table["Zwycięstwa"] * 3 + league_table["Remisy"]
-
-        # Sort the league table
-        league_table_sorted = league_table.sort_values(by=["Punkty", "Różnica_Bramek"], ascending=[False, False])
-
-        league_table_sorted = league_table_sorted.rename(columns={
-        "Strzelone_Bramki": "Strzelone Bramki",
-        "Stracone_Bramki": "Stracone Bramki",
-        "Różnica_Bramek": "Różnica Bramek"       
-        })
+        # Date selection using selectbox with actual match dates
+        selected_date_str = st.selectbox(
+            "Wybierz datę",
+            options=[d.strftime("%d/%m/%Y") for d in unique_dates],
+            index=0  # Default to most recent date
+        )
         
-        league_table_sorted.reset_index(drop=True, inplace=True)
-        league_table_sorted.index += 1
-
-        st.markdown(league_table_sorted.to_html(escape=False), unsafe_allow_html=True)  
-        #st.dataframe(league_table_sorted)
+        show_all_dates = st.checkbox("Pokaż wszystkie daty", value=False)
         
-    else:
-        # Display match results
-        team_filtered_df["date"] = pd.to_datetime(team_filtered_df['date'], format="%d/%m/%Y").dt.date
-        team_filtered_df_sorted = team_filtered_df[["date", "pitch", "group", "home_team", "home_goals", "away_team", "away_goals"]].sort_values(by=["date", "group"],ascending=[True,True])
-        team_filtered_df_sorted.reset_index(drop=True, inplace=True)
-        team_filtered_df_sorted.index += 1
-
-        team_filtered_df_sorted = team_filtered_df_sorted.rename(columns={
-        "date": "Data",
-        "pitch": "Boisko",
-        "group": "Grupa",
-        "home_team": "Drużyna Gospodarzy",
-        "away_team": "Zespół Gości",
-        "home_goals": "\u2003",
-        "away_goals": "\u2800"
-        })
-
-        if selected_team == "Wszystkie Drużyny" and view_option == "Wyniki Meczu":
+        if show_all_dates:
+            # Calculate overall league table
+            league_table = calculate_league_table(filtered_df)
+            st.subheader(f"Ogólna tabela ligowa")
+            st.markdown(league_table.to_html(escape=False), unsafe_allow_html=True)
+        else:
+            # Calculate daily league tables by group
+            selected_date = datetime.strptime(selected_date_str, "%d/%m/%Y").date()
+            date_df = filtered_df[filtered_df['date'].dt.date == selected_date]
+            groups = sorted(date_df['group'].unique())
             
-            # Function to assign a background color based on "Grupa"
-            def assign_background_color(group):
-                if group == "A":
-                    return "background-color: #2E4E6F;"  # Darker blue for Grupa A
-                elif group == "B":
-                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa B
-                elif group == "C":
-                    return "background-color: #2E4E6F;"  # Darker blue for Grupa C
-                elif group == "D":
-                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-                elif group == "E":
-                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-                elif group == "F":
-                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-                elif group == "G":
-                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-                elif group == "H":
-                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-                elif group == "I":
-                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-                elif group == "J":
-                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-                elif group == "K":
-                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-                elif group == "L":
-                    return "background-color: #1C2E4A;"  # Lighter blue for Grupa D
-                elif group == "M":
-                    return "background-color: #2E4E6F;"  # Lighter blue for Grupa D
-                    
-                # Add more conditions if there are more groups
-                else:
-                    return ""  # Default (no background color)
-    
-            # Apply the background color to each row based on "Grupa"
-            team_filtered_df_sorted["style"] = team_filtered_df_sorted["Grupa"].apply(assign_background_color)    
-    
-             # Generate the HTML table with inline styles, excluding the "style" column
-            html_table = (
-                team_filtered_df_sorted
-                .style
-                .apply(lambda x: [x["style"]] * len(x), axis=1)  # Apply styles
-                .hide(axis="columns", subset=["style"])  # Hide the "style" column
-                .to_html(escape=False, index=False)
-            )
-    
-            # Display the styled match results
-            st.markdown(html_table, unsafe_allow_html=True)        
-        
-        else:                                        
-            # Custom CSS for alternating every three rows
-            st.markdown(
-                """
-                <style>
-                /* Alternating every three rows */
-                .stMarkdown table tr:nth-child(6n+1),
-                .stMarkdown table tr:nth-child(6n+2),
-                .stMarkdown table tr:nth-child(6n+3) {         
-    
-                    background-color: #2E4E6F; /* Darker blue for the first six rows */
-                }
-                .stMarkdown table tr:nth-child(6n+4),
-                .stMarkdown table tr:nth-child(6n+5),
-                .stMarkdown table tr:nth-child(6n+6) {
-              
-                    background-color: #1C2E4A; /* Lighter blue for the next six rows */
-                }
-                .stMarkdown table th { background-color: #00172B; color: white; }
-                .stMarkdown table td { color: white; }
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
-                
-            # Highlight the selected team in red
-            #def highlight_team_match(val):
-                #if val == selected_team:
-                    #return f'<span style="color: #2E4E6F;">{val}</span>'
-                #return val
-    
-            # Apply highlighting to the "Drużyna Gospodarzy" and "Zespół Gości" columns
-            #team_filtered_df_sorted["Drużyna Gospodarzy"] = team_filtered_df_sorted["Drużyna Gospodarzy"].apply(highlight_team_match)
-            #team_filtered_df_sorted["Zespół Gości"] = team_filtered_df_sorted["Zespół Gości"].apply(highlight_team_match)
-    
-           # Display the styled match results
-            st.markdown(team_filtered_df_sorted.to_html(escape=False), unsafe_allow_html=True)
-                  
-            #st.dataframe(team_filtered_df_sorted_styled, height=600, width=500)  # Set fixed height to enable scrolling 
-       
+            if not groups:
+                st.warning(f"Brak meczów w dniu {selected_date_str}")
+            else:
+                for group in groups:
+                    group_df = date_df[date_df['group'] == group]
+                    league_table = calculate_league_table(group_df)
+                    st.subheader(f"Tabela ligowa Grupy {group} - {selected_date_str}")
+                    st.markdown(league_table.to_html(escape=False), unsafe_allow_html=True)
+                    st.write("")
 
-# Run the Streamlit app
+    else:  # Wyniki Meczu
+        # Date selection using selectbox with actual match dates
+        selected_date_str = st.selectbox(
+            "Wybierz datę",
+            options=["Wszystkie daty"] + [d.strftime("%d/%m/%Y") for d in unique_dates],
+            index=0  # Default to most recent date
+        )
+        
+        # Filter by date
+        if selected_date_str == "Wszystkie daty":
+            results_df = team_filtered_df.copy()
+        else:
+            selected_date = datetime.strptime(selected_date_str, "%d/%m/%Y").date()
+            results_df = team_filtered_df[team_filtered_df['date'].dt.date == selected_date]
+        
+        # Format and display results with index starting at 1
+        results_df = results_df.sort_values(['date', 'group'])
+        results_df["date"] = results_df['date'].dt.strftime('%d/%m/%Y')
+        
+        results_display = results_df[["date", "pitch", "group", "home_team", "home_goals", "away_team", "away_goals"]]
+        results_display = results_display.rename(columns={
+            "date": "Data", "pitch": "Boisko", "group": "Grupa",
+            "home_team": "Drużyna Gospodarzy", "away_team": "Zespół Gości",
+            "home_goals": "\u2003", "away_goals": "\u2800"
+        })
+        
+        # Reset index to start at 1
+        results_display.index = range(1, len(results_display)+1)
+        
+        if len(results_display) == 0:
+            st.warning("Brak meczów dla wybranych kryteriów")
+        else:
+            if selected_team == "Wszystkie Drużyny":
+                # Apply group-based coloring
+                results_display["style"] = results_display["Grupa"].apply(
+                    lambda g: "background-color: #2E4E6F;" if ord(g) % 2 else "background-color: #1C2E4A;"
+                )
+                html_table = (results_display.style
+                             .apply(lambda x: [x["style"]] * len(x), axis=1)
+                             .hide(axis="columns", subset=["style"])
+                             .to_html(escape=False))
+                st.markdown(html_table, unsafe_allow_html=True)
+            else:
+                st.markdown(
+                    """
+                    <style>
+                    /* Alternating every three rows */
+                    .stMarkdown table tr:nth-child(6n+1),
+                    .stMarkdown table tr:nth-child(6n+2),
+                    .stMarkdown table tr:nth-child(6n+3) {         
+                        background-color: #2E4E6F;
+                    }
+                    .stMarkdown table tr:nth-child(6n+4),
+                    .stMarkdown table tr:nth-child(6n+5),
+                    .stMarkdown table tr:nth-child(6n+6) {
+                        background-color: #1C2E4A;
+                    }
+                    .stMarkdown table th { background-color: #00172B; color: white; }
+                    .stMarkdown table td { color: white; }
+                    </style>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.markdown(results_display.to_html(escape=False), unsafe_allow_html=True)
+
 if __name__ == "__main__":
-    app()
+    main()
