@@ -91,7 +91,7 @@ def calculate_league_table(df):
 def main():
     st.set_page_config(layout="wide")    
     
-    st.title("Liga MT - Sezon Zimowy")
+    st.title("Liga Młodych Talentów #ZIMA2025")
     st.header("by Stephen Barrie")
 
     st.markdown(
@@ -161,8 +161,8 @@ def main():
             (filtered_df["away_team"] == selected_team)
         ]
 
-    # Display League Table or Match Results
-    view_option = st.radio("Wybierz Widok:", ["Tabela Ligowa", "Wyniki Meczu"])
+    # Main view selection - now with three options
+    view_option = st.radio("Wybierz Widok:", ["Tabela Ligowa", "Tabela Dnia", "Wyniki Meczu"])
 
     if view_option == "Tabela Ligowa":
         st.markdown(
@@ -182,36 +182,69 @@ def main():
             unsafe_allow_html=True,
         )
         
-        # Date selection using selectbox with actual match dates
+        # Always show the overall league table for all teams
+        league_table = calculate_league_table(filtered_df)
+        st.subheader(f"Tabela Ligowa - Wszystkie Drużyny")
+        st.markdown(league_table.to_html(escape=False), unsafe_allow_html=True)
+
+    elif view_option == "Tabela Dnia":
+        st.markdown(
+            """
+            <style>
+            /* Alternating every row */
+            .stMarkdown table tr:nth-child(2n+1) {         
+                background-color: #2E4E6F;
+            }
+            .stMarkdown table tr:nth-child(2n+2) {
+                background-color: #1C2E4A;
+            }
+            .stMarkdown table th { background-color: #00172B; color: white; }
+            .stMarkdown table td { color: white; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        # Date selection for daily league tables
         selected_date_str = st.selectbox(
             "Wybierz datę",
             options=[d.strftime("%d/%m/%Y") for d in unique_dates],
             index=0  # Default to most recent date
         )
+        selected_date = datetime.strptime(selected_date_str, "%d/%m/%Y").date()
         
-        show_all_dates = st.checkbox("Pokaż wszystkie daty", value=False)
+        # Filter by date
+        date_df = filtered_df[filtered_df['date'].dt.date == selected_date]
         
-        if show_all_dates:
-            # Calculate overall league table
-            league_table = calculate_league_table(filtered_df)
-            st.subheader(f"Tabela Ligowa")
-            st.markdown(league_table.to_html(escape=False), unsafe_allow_html=True)
-        else:
-            # Calculate daily league tables by group
-            selected_date = datetime.strptime(selected_date_str, "%d/%m/%Y").date()
-            date_df = filtered_df[filtered_df['date'].dt.date == selected_date]
+        if selected_team == "Wszystkie Drużyny":
+            # Show all groups for selected date
             groups = sorted(date_df['group'].unique())
             
             if not groups:
                 st.warning(f"Brak meczów w dniu {selected_date_str}")
             else:
-                st.header (f"Tabela Dnia - {selected_date_str}")
+                st.header(f"Tabela Dnia - {selected_date_str}")
                 for group in groups:
                     group_df = date_df[date_df['group'] == group]
                     league_table = calculate_league_table(group_df)                   
                     st.subheader(f"Grupa {group}")                 
                     st.markdown(league_table.to_html(escape=False), unsafe_allow_html=True)
                     st.write("")
+        else:
+            # Find which group the selected team is in for this date
+            team_groups = date_df[(date_df['home_team'] == selected_team) | 
+                                (date_df['away_team'] == selected_team)]['group'].unique()
+            
+            if len(team_groups) == 0:
+                st.warning(f"Wybrana drużyna ({selected_team}) nie grała w dniu {selected_date_str}")
+            else:
+                # Should only be one group per team per date
+                group = team_groups[0]
+                group_df = date_df[date_df['group'] == group]
+                league_table = calculate_league_table(group_df)
+                st.header(f"Tabela Dnia - {selected_date_str}")
+                st.subheader(f"Grupa {group}")
+                st.markdown(league_table.to_html(escape=False), unsafe_allow_html=True)
 
     else:  # Wyniki Meczu
         # Date selection using selectbox with actual match dates
