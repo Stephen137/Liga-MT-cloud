@@ -232,9 +232,9 @@ def main():
         results_df = results_df.sort_values(['date', 'group'])
         results_df["date"] = results_df['date'].dt.strftime('%d/%m/%Y')
         
-        results_display = results_df[["date", "pitch", "group", "home_team", "home_goals", "away_team", "away_goals"]]
+        results_display = results_df[["round", "date", "pitch", "group", "home_team", "home_goals", "away_team", "away_goals"]]
         results_display = results_display.rename(columns={
-            "date": "Data", "pitch": "Boisko", "group": "Grupa",
+            "round": "Kolejka", "date": "Data", "pitch": "Boisko", "group": "Grupa",
             "home_team": "Drużyna Gospodarzy", "away_team": "Zespół Gości",
             "home_goals": "\u2003", "away_goals": "\u2800"
         })
