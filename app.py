@@ -194,7 +194,7 @@ def main():
         if show_all_dates:
             # Calculate overall league table
             league_table = calculate_league_table(filtered_df)
-            st.subheader(f"Ogólna tabela ligowa")
+            st.subheader(f"Tabela Ligowa")
             st.markdown(league_table.to_html(escape=False), unsafe_allow_html=True)
         else:
             # Calculate daily league tables by group
@@ -208,7 +208,7 @@ def main():
                 for group in groups:
                     group_df = date_df[date_df['group'] == group]
                     league_table = calculate_league_table(group_df)
-                    st.subheader(f"Tabela ligowa Grupy {group} - {selected_date_str}")
+                    st.subheader(f"Grupa {group} - Tabela Dnia - {selected_date_str}")
                     st.markdown(league_table.to_html(escape=False), unsafe_allow_html=True)
                     st.write("")
 
