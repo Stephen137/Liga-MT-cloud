@@ -205,10 +205,10 @@ def main():
             if not groups:
                 st.warning(f"Brak meczów w dniu {selected_date_str}")
             else:
+                st.header (f"Tabela Dnia - {selected_date_str}")
                 for group in groups:
                     group_df = date_df[date_df['group'] == group]
-                    league_table = calculate_league_table(group_df)
-                    st.header (f"Tabela Dnia - {selected_date_str}")
+                    league_table = calculate_league_table(group_df)                   
                     st.subheader(f"Grupa {group}")                 
                     st.markdown(league_table.to_html(escape=False), unsafe_allow_html=True)
                     st.write("")
